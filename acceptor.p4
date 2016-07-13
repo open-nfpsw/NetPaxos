@@ -1,59 +1,8 @@
-header_type ethernet_t {
-    fields {
-        dstAddr : 48;
-        srcAddr : 48;
-        etherType : 16;
-    }
-}
+#include "headers.p4"
 
-header_type ipv4_t {
+header_type local_metadata_t {
     fields {
-        version : 4;
-        ihl : 4;
-        diffserv : 8;
-        totalLen : 16;
-        identification : 16;
-        flags : 3;
-        fragOffset : 13;
-        ttl : 8;
-        protocol : 8;
-        hdrChecksum : 16;
-        src : 32;
-        dst: 32;
-    }
-}
-
-header_type udp_t {
-    fields {
-        srcPort : 16;
-        dstPort : 16;
-        length_ : 16;
-        checksum : 16;
-    }
-}
-
-// Headers for Paxos
-
-header_type paxos_t {
-    fields {
-        inst    : 32;
-        rnd     : 16;
-        vrnd    : 16;
-        acpt    : 16;
-        msgtype : 16;
-        val     : 32;
-        fsh     : 32;  // Forwarding start (h: high bits, l: low bits)
-        fsl     : 32;
-        feh     : 32;  // Forwarding end
-        fel     : 32;
-        csh     : 32;  // Coordinator start
-        csl     : 32;
-        ceh     : 32;  // Coordinator end
-        cel     : 32;
-        ash     : 32;  // Acceptor start
-        asl     : 32;
-        aeh     : 32; // Acceptor end
-        ael     : 32;
+        rnd : RND_SIZE;
     }
 }
 
@@ -62,6 +11,7 @@ header ethernet_t ethernet;
 header ipv4_t ipv4;
 header udp_t udp;
 header paxos_t paxos;
+metadata local_metadata_t local_metadata;
 
 #define ETHERTYPE_IPV4 0x0800
 #define UDP_PROTOCOL 0x11
@@ -97,19 +47,34 @@ parser parse_udp {
 
 parser parse_paxos {
     extract(paxos);
+    set_metadata(local_metadata.rnd, latest.rnd);
     return ingress;
+}
+
+register acceptor_id {
+    width: ACPT_SIZE;
+    instance_count : 1; 
+}
+
+register rnd_register {
+    width : RND_SIZE;
+    instance_count : INST_COUNT;
+}
+
+register vrnd_register {
+    width : RND_SIZE;
+    instance_count : INST_COUNT;
+}
+
+register val_register {
+    width : VALUE_SIZE;
+    instance_count : INST_COUNT;
 }
 
 primitive_action get_forwarding_start_time();
 primitive_action get_forwarding_end_time();
-primitive_action get_coordinator_start_time();
-primitive_action get_coordinator_end_time();
 primitive_action get_acceptor_start_time();
 primitive_action get_acceptor_end_time();
-primitive_action seq_func();
-primitive_action paxos_phase1a();
-primitive_action paxos_phase2a();
-primitive_action reset_registers();
 
 
 action forward(port) {
@@ -136,27 +101,32 @@ action _drop() {
     drop();
 }
 
-action increase_seq() {
-    get_coordinator_start_time();
-    seq_func();
-    modify_field(udp.checksum, 0);
-    get_coordinator_end_time();
+action read_round() {
+    register_read(local_metadata.rnd, rnd_register, paxos.inst); 
 }
 
+table round_tbl {
+    actions { read_round; }
+    size : 1;
+}
+
+
 action handle_phase1a() {
-    paxos_phase1a();
+    // paxos_phase1a();
+    register_write(rnd_register, paxos.inst, paxos.rnd);
+    register_read(paxos.acpt, acceptor_id, 0);
     modify_field(udp.checksum, 0);
 }
 
 action handle_phase2a() {
     get_acceptor_start_time();
-    paxos_phase2a();
+    register_write(rnd_register, paxos.inst, paxos.rnd);
+    register_write(vrnd_register, paxos.inst, paxos.rnd);
+    register_write(val_register, paxos.inst, paxos.val);
+    modify_field(paxos.msgtype, PHASE_2B);
+    register_read(paxos.acpt, acceptor_id, 0);
     get_acceptor_end_time();
     modify_field(udp.checksum, 0);
-}
-
-action reset_paxos() {
-    reset_registers();
 }
 
 table paxos_tbl {
@@ -164,10 +134,8 @@ table paxos_tbl {
         paxos.msgtype : exact;
     }
     actions {
-        increase_seq;
         handle_phase1a;
         handle_phase2a;
-        reset_paxos;
         _no_op;
     }
     size : 8;
@@ -178,6 +146,9 @@ control ingress {
         apply(fwd_tbl);
     }
     if (valid (paxos)) {
-        apply(paxos_tbl);
+        apply(round_tbl);
+        if (local_metadata.rnd <= paxos.rnd) {
+            apply(paxos_tbl);
+        }
     }
 }
