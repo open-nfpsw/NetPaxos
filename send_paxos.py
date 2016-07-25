@@ -45,10 +45,10 @@ def generate(args):
 
     p = p / Paxos(inst=args.inst, ballot=args.ballot, acceptor=args.acceptor, msgtype=args.msgtype, val=args.value)
 
-    hexdump(p)
+    # hexdump(p)
     p.show()
 
-    sendp(p, filter="udp and dst port 0x8888", iface = args.interface)
+    sendp(p, filter="udp and dst port 0x8888", iface = args.interface, count=args.count)
 
 def handle(x):
     hexdump(x)
@@ -66,6 +66,7 @@ def main():
     parser.add_argument('-b', "--ballot", type=int, default=2, help="set the ballot value")
     parser.add_argument('-a', "--acceptor", type=int, default=2, help="set acceptor's id")
     parser.add_argument('-s', "--server", default=False, action='store_true', help="set role")
+    parser.add_argument('-c', "--count", type=int, default=1, help="set the number of packets for transmitting")
 
     args = parser.parse_args()
 
