@@ -2,7 +2,7 @@
 
 header_type local_metadata_t {
     fields {
-        rnd : RND_SIZE;
+        proposal : PROPOSAL_SIZE;
     }
 }
 
@@ -47,7 +47,6 @@ parser parse_udp {
 
 parser parse_paxos {
     extract(paxos);
-    set_metadata(local_metadata.rnd, latest.rnd);
     return ingress;
 }
 
@@ -56,13 +55,13 @@ register acceptor_id {
     instance_count : 1; 
 }
 
-register rnd_register {
-    width : RND_SIZE;
+register proposal_register {
+    width : PROPOSAL_SIZE;
     instance_count : INST_COUNT;
 }
 
-register vrnd_register {
-    width : RND_SIZE;
+register vproposal_register {
+    width : PROPOSAL_SIZE;
     instance_count : INST_COUNT;
 }
 
@@ -102,7 +101,7 @@ action _drop() {
 }
 
 action read_round() {
-    register_read(local_metadata.rnd, rnd_register, paxos.inst); 
+    register_read(local_metadata.proposal, proposal_register, paxos.inst); 
 }
 
 table round_tbl {
@@ -112,21 +111,25 @@ table round_tbl {
 
 
 action handle_phase1a() {
-    // paxos_phase1a();
-    register_write(rnd_register, paxos.inst, paxos.rnd);
+    get_acceptor_start_time();
+    register_write(proposal_register, paxos.inst, paxos.proposal);
+    register_read(paxos.vproposal, vproposal_register, paxos.inst);
+    register_read(paxos.val, val_register, paxos.inst);
+    modify_field(paxos.msgtype, PHASE_1B);
     register_read(paxos.acpt, acceptor_id, 0);
     modify_field(udp.checksum, 0);
+    get_acceptor_end_time();
 }
 
 action handle_phase2a() {
     get_acceptor_start_time();
-    register_write(rnd_register, paxos.inst, paxos.rnd);
-    register_write(vrnd_register, paxos.inst, paxos.rnd);
+    register_write(proposal_register, paxos.inst, paxos.proposal);
+    register_write(vproposal_register, paxos.inst, paxos.proposal);
     register_write(val_register, paxos.inst, paxos.val);
     modify_field(paxos.msgtype, PHASE_2B);
     register_read(paxos.acpt, acceptor_id, 0);
-    get_acceptor_end_time();
     modify_field(udp.checksum, 0);
+    get_acceptor_end_time();
 }
 
 table paxos_tbl {
@@ -141,14 +144,25 @@ table paxos_tbl {
     size : 8;
 }
 
+table drop_tbl {
+    actions {
+        _drop;
+    }
+    size : 1;
+}
+
 control ingress {
     if (valid (ipv4)) {
         apply(fwd_tbl);
     }
+
     if (valid (paxos)) {
         apply(round_tbl);
-        if (local_metadata.rnd <= paxos.rnd) {
+        if (local_metadata.proposal <= paxos.proposal) {
             apply(paxos_tbl);
+        } else {
+            apply(drop_tbl);
         }
     }
+
 }

@@ -17,8 +17,8 @@ class Paxos(Packet):
    name = "Paxos" 
    fields_desc =  [ 
                     IntField("inst", 2),
-                    ShortField("ballot", 2), 
-                    ShortField("vballot", 2), 
+                    ShortField("proposal", 2), 
+                    ShortField("vproposal", 2), 
                     ShortField("acceptor", 0), 
                     ShortEnumField("msgtype", 3, msgtype), 
                     XIntField("val", 0),
@@ -43,19 +43,19 @@ def generate(args):
         IP(src="10.0.0.1", dst="10.0.0.2") / \
         UDP(sport=54213)
 
-    p = p / Paxos(inst=args.inst, ballot=args.ballot, acceptor=args.acceptor, msgtype=args.msgtype, val=args.value)
+    p = p / Paxos(inst=args.inst, proposal=args.proposal, acceptor=args.acceptor, msgtype=args.msgtype, val=args.value)
 
     # hexdump(p)
     p.show()
 
-    sendp(p, filter="udp and dst port 0x8888", iface = args.interface, count=args.count)
+    sendp(p, iface = args.interface, count=args.count)
 
 def handle(x):
     hexdump(x)
     x.show()
 
 def receive(args):
-    sniff(iface = args.interface, prn = lambda x: handle(x))
+    sniff(iface = args.interface, filter="udp and dst port 0x8888", prn = lambda x: handle(x))
 
 def main():
     parser = argparse.ArgumentParser(description='Paxos packet generator')
@@ -63,7 +63,7 @@ def main():
     parser.add_argument("-v", "--value", type=int, default=0x1234, help="set value")
     parser.add_argument("--inst", type=int, default=1, help="set the instance")
     parser.add_argument('-t', "--msgtype", type=int, default=3, help="set the message type")
-    parser.add_argument('-b', "--ballot", type=int, default=2, help="set the ballot value")
+    parser.add_argument('-p', "--proposal", type=int, default=2, help="set the proposal value")
     parser.add_argument('-a', "--acceptor", type=int, default=2, help="set acceptor's id")
     parser.add_argument('-s', "--server", default=False, action='store_true', help="set role")
     parser.add_argument('-c', "--count", type=int, default=1, help="set the number of packets for transmitting")

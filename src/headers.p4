@@ -1,5 +1,5 @@
 #define INST_SIZE 32
-#define RND_SIZE 16
+#define PROPOSAL_SIZE 16
 #define VALUE_SIZE 32
 #define ACPT_SIZE 16
 #define MSGTYPE_SIZE 16
@@ -48,23 +48,23 @@ header_type udp_t {
 
 header_type paxos_t {
     fields {
-        inst    : INST_SIZE;
-        rnd     : RND_SIZE;
-        vrnd    : RND_SIZE;
-        acpt    : ACPT_SIZE;
-        msgtype : MSGTYPE_SIZE;
-        val     : VALUE_SIZE;
-        fsh     : 32;  // Forwarding start (h: high bits, l: low bits)
-        fsl     : 32;
-        feh     : 32;  // Forwarding end
-        fel     : 32;
-        csh     : 32;  // Coordinator start
-        csl     : 32;
-        ceh     : 32;  // Coordinator end
-        cel     : 32;
-        ash     : 32;  // Acceptor start
-        asl     : 32;
-        aeh     : 32; // Acceptor end
-        ael     : 32;
+        inst      : INST_SIZE;
+        proposal  : PROPOSAL_SIZE;
+        vproposal : PROPOSAL_SIZE;
+        acpt      : ACPT_SIZE;
+        msgtype   : MSGTYPE_SIZE;
+        val       : VALUE_SIZE;
+        fsh       : 32;  // Forwarding start (h: high bits, l: low bits)
+        fsl       : 32;
+        feh       : 32;  // Forwarding end
+        fel       : 32;
+        csh       : 32;  // Coordinator start
+        csl       : 32;
+        ceh       : 32;  // Coordinator end
+        cel       : 32;
+        ash       : 32;  // Acceptor start
+        asl       : 32;
+        aeh       : 32; // Acceptor end
+        ael       : 32;
     }
 }
