@@ -6,19 +6,19 @@ import argparse
 import zlib
 
 msgtype = {
-    1 : 'PHASE1A',
-    2 : 'PHASE1B',
-    3 : 'PHASE2A',
-    4 : 'PHASE2B',
+    1 : 'PREPARE',
+    2 : 'PROMISE',
+    3 : 'ACCEPT',
+    4 : 'ACCEPTED',
     5 : 'DELIVER',
 }
 
 class Paxos(Packet): 
    name = "Paxos" 
    fields_desc =  [ 
-                    IntField("inst", 2),
-                    ShortField("proposal", 2), 
-                    ShortField("vproposal", 2), 
+                    IntField("inst", 0),
+                    ShortField("proposal", 0), 
+                    ShortField("vproposal", 0), 
                     ShortField("acceptor", 0), 
                     ShortEnumField("msgtype", 3, msgtype), 
                     XIntField("val", 0),
@@ -63,8 +63,8 @@ def main():
     parser.add_argument("-v", "--value", type=int, default=0x1234, help="set value")
     parser.add_argument("--inst", type=int, default=1, help="set the instance")
     parser.add_argument('-t', "--msgtype", type=int, default=3, help="set the message type")
-    parser.add_argument('-p', "--proposal", type=int, default=2, help="set the proposal value")
-    parser.add_argument('-a', "--acceptor", type=int, default=2, help="set acceptor's id")
+    parser.add_argument('-p', "--proposal", type=int, default=0, help="set the proposal value")
+    parser.add_argument('-a', "--acceptor", type=int, default=0, help="set acceptor's id")
     parser.add_argument('-s', "--server", default=False, action='store_true', help="set role")
     parser.add_argument('-c', "--count", type=int, default=1, help="set the number of packets for transmitting")
 

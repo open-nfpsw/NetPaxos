@@ -1,8 +1,24 @@
 {
     "registers": {
-        "configs": []
+        "configs": [
+            {
+                "count": 0, 
+                "index": 0, 
+                "register": "acceptor_id", 
+                "name": "acceptor_id", 
+                "value": "1"
+            }
+        ]
     }, 
     "tables": {
+        "drop_tbl": {
+            "default_rule": {
+                "action": {
+                    "type": "_drop"
+                }, 
+                "name": "Drop"
+            }
+        }, 
         "fwd_tbl": {
             "rules": [
                 {

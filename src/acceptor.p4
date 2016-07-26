@@ -127,6 +127,7 @@ action handle_phase2a() {
     register_write(vproposal_register, paxos.inst, paxos.proposal);
     register_write(val_register, paxos.inst, paxos.val);
     modify_field(paxos.msgtype, PHASE_2B);
+    modify_field(paxos.vproposal, paxos.proposal);
     register_read(paxos.acpt, acceptor_id, 0);
     modify_field(udp.checksum, 0);
     get_acceptor_end_time();
